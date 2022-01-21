@@ -2,14 +2,13 @@
 # File       :  process_data.py
 # Time       :  2022/1/20 4:23 下午
 # Author     : Qi
-# Description:
+# Description: 分别定义加载四个数据集的方法
 """
 
-import settings
-from tqdm import tqdm
+import json
+import urllib.request
 from datasets import load_dataset
-import urllib.request, json
-from transformers import GPT2Tokenizer
+from tqdm import tqdm
 
 # 句子结束标志
 end_marks = ['.', ',', '?', '!', '...']
@@ -26,6 +25,9 @@ space = 'Ġ'
 
 # persona_chat 训练数据 url
 persona_chat_url = 'https://s3.amazonaws.com/datasets.huggingface.co/personachat/personachat_self_original.json'
+
+# persona_chat 特殊符号
+silence_symbol = "__ SILENCE __"
 
 # empathetic_dialogues 中的标记符号
 comma_symbol = "_comma_"  # 逗号
@@ -183,22 +185,83 @@ def load_empathetic(tokenizer, train_frac):
 
 # 加载 persona_chat 数据集
 def load_persona(tokenizer, train_frac):
+
+    # 从url获取数据
     with urllib.request.urlopen(persona_chat_url) as f:
         dataset = json.loads(f.read().decode())
 
     train_dialogues = dataset['train']  # 17878
     valid_dialogues = dataset['valid']  # 1000
     total_data = train_dialogues + valid_dialogues
-    print(len(train_dialogues))
-    print(len(valid_dialogues))
-    print(train_dialogues[0])
+
     total_dialogues = []
+    for item in tqdm(total_data):
+        dialogue = item['utterances'][-1]['history']
+        new_dialogue = []
+        for i, utter in enumerate(dialogue):
+            if utter.strip() != silence_symbol:
+                token_list = tokenizer.tokenize(utter.strip())
+                new_token_list = process_token_list(token_list)
+                text = tokenizer.convert_tokens_to_string(new_token_list)
+                new_dialogue.append(text)
 
+        total_dialogues.append(new_dialogue)
 
+    train_utter_num = 0
+    valid_utter_num = 0
+    train_dialogues = total_dialogues[:int(len(total_dialogues) * train_frac)]
+    valid_dialogues = total_dialogues[int(len(total_dialogues) * train_frac):]
 
-#
-# checkpoint = 'gpt2'
-# # # model = GPT2Tokenizer.from_pretrained(checkpoint)
-# tokenizer = GPT2Tokenizer.from_pretrained(checkpoint)
-load_persona('', 0.85)
+    for dialogue in train_dialogues:
+        train_utter_num += len(dialogue)
+
+    for dialogue in valid_dialogues:
+        valid_utter_num += len(dialogue)
+
+    return train_dialogues, valid_dialogues, train_utter_num, valid_utter_num
+
+# 加载 blended_skill_talk 数据集
+def load_blended(tokenizer, train_frac):
+    dataset = load_dataset('blended_skill_talk')
+    data_train = dataset['train']       # 4819
+    data_valid = dataset['validation']  # 1009
+    data_test = dataset['test']         # 980
+
+    # 6808
+    total_previous_utterance = data_train['previous_utterance'] + data_valid['previous_utterance'] + data_test['previous_utterance']
+    total_free_messages = data_train['free_messages'] + data_valid['free_messages'] + data_test['free_messages']
+    total_guided_messages = data_train['guided_messages'] + data_valid['guided_messages'] + data_test['guided_messages']
+
+    for i, free_message in enumerate(tqdm(total_free_messages)):
+        free_message_list = [utter.strip() for utter in free_message if len(utter.strip()) > 0]
+        guided_message_list = [utter.strip() for utter in total_guided_messages[i] if len(utter.strip()) > 0]
+        dialogue = total_previous_utterance[i]
+
+        total_dialogues = []
+        for j in range(len(free_message_list)):
+            token_list = tokenizer.tokenize(free_message_list[j])
+            token_list = process_token_list(token_list)
+            text = tokenizer.convert_tokens_to_string(token_list)
+            dialogue.append(text)
+
+            if j < len(guided_message_list):
+                token_list = process_token_list(tokenizer.tokenize(guided_message_list[j]))
+                text = tokenizer.convert_tokens_to_string(token_list)
+                dialogue.append(text)
+
+        total_dialogues.append(dialogue)
+
+    train_utter_num = 0
+    valid_utter_num = 0
+    train_dialogues = total_dialogues[:int(len(total_dialogues) * train_frac)]
+    valid_dialogues = total_dialogues[int(len(total_dialogues) * train_frac):]
+
+    for dialogue in train_dialogues:
+        train_utter_num += len(dialogue)
+
+    for dialogue in valid_dialogues:
+        valid_utter_num += len(dialogue)
+
+    return train_dialogues, valid_dialogues, train_utter_num, valid_utter_num
+
 
