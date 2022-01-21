@@ -78,7 +78,7 @@ def save_data(prefix, data_dir, dialogues, tokenizer):
 
 if __name__ == '__main__':
 
-    data_dir = f"{config['data_dir']}/{config['model_name']}"
+    data_dir = config['data_dir']
     # 如果存在，则直接返回
     if os.path.exists(data_dir):
         pass
