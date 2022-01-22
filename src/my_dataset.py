@@ -67,6 +67,7 @@ class MyDataset(Dataset):
                             self.input_ids.append(input_ids)
                             self.token_type_ids.append(token_type_ids)
                             self.labels.append(labels)
+                            # 当找到一个满足的对话，即跳出循环，寻找下一个满足的对话
                             break
 
     def __getitem__(self, idx):

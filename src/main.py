@@ -1,7 +1,7 @@
 from settings import config
 from utils import seed_everything
-from Trainer import Trainer
-from Predictor import Predictor
+from trainer import Trainer
+from predictor import Predictor
 from my_dataset import MyDataset, PadCollate
 from transformers import GPT2Tokenizer, GPT2LMHeadModel, get_polynomial_decay_schedule_with_warmup
 import torch

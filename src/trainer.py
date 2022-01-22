@@ -121,7 +121,7 @@ class Trainer():
             for i, batch in enumerate(tqdm(self.valid_loader)):
                 input_ids, token_type_ids, labels = batch
                 input_ids, token_type_ids, labels = \
-                    input_ids.to(self.args.device), token_type_ids.to(self.args.device), labels.to(self.args.device)
+                    input_ids.to(config['device']), token_type_ids.to(config['device']), labels.to(config['device'])
 
                 outputs = self.model(
                     input_ids=input_ids,

@@ -16,14 +16,6 @@ class Predictor():
         self.sp1_id = vocab[config['sp1_token']]
         self.sp2_id = vocab[config['sp2_token']]
 
-        if self.args.ckpt_name is not None:
-            if os.path.exists(f"{config['ckpt_dir']}/{self.args.ckpt_name}.ckpt"):
-                print("Loading the pre-trained checkpoint...")
-                ckpt = torch.load(f"{config['ckpt_dir']}/{self.args.ckpt_name}.ckpt", map_location=config['device'])
-                self.model.load_state_dict(ckpt['model_state_dict'])
-            else:
-                print("Can't inference!")
-                exit()
 
     def infer(self):
         print("Let's start!")
